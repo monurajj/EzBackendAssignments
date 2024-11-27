@@ -9,10 +9,15 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
+
+            # Save the user and create a refresh token for them
             user = serializer.save()
             refresh = RefreshToken.for_user(user)
+
+            # Create the email verification URL
             verification_url = f"http://localhost:8000/users/verify-email/{refresh.access_token}/"
 
+            # Send the verification email
             send_mail(
                 "Verify Your Email",
                 f"Click the link to verify: {verification_url}",
@@ -21,6 +26,14 @@ class SignUpView(APIView):
                 fail_silently=False,
             )
 
-            return Response({"message": "User created. Check email for verification."}, status=status.HTTP_201_CREATED)
+            # Return the response with the refresh token and a success message
+            return Response(
+                {
+                    "message": "User created successfully. Please check your email for verification.",
+                    "refresh_token": str(refresh),
+                    "access_token": str(refresh.access_token),
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
